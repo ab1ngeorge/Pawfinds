@@ -127,12 +127,12 @@ Users can search for pets, apply to adopt, and interact with shelters.
 
 ---
 
-## 🛠️ Tech Stack (Optional)
+## 🛠️ Tech Stack 
 
-- **Frontend:** React / Vue / HTML-CSS  
-- **Backend:** Node.js / Django / Flask  
-- **Database:** MongoDB / PostgreSQL / MySQL  
-- **Authentication:** JWT / OAuth  
+- **Frontend:**  HTML-CSS  
+- **Backend:** PHP (via XAMPP)
+- **Database:**  MySQL  
+- **Authentication:** PHP Sessions (for local login systems) 
 - **Hosting:** Vercel / Heroku / Netlify / AWS  
 
 ---
@@ -169,4 +169,4 @@ Let me know — happy to help! 😊
 ## 📬 Contact
 
 Got questions, suggestions, or feedback?  
-Open an [issue](https://github.com/your-username/pet-adoption-portal/issues) or reach out via [email/contact link].
+Open an [issue](https://github.com/ab1ngeorge/Pawfinds.git) or reach out via [email/contact link].
