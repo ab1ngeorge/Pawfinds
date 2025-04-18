@@ -1,88 +1,105 @@
-<?php include('header.php'); ?>
+<?php
+session_start();
+include('includes/db.php');  // Include the database connection
+include('includes/header.php');
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ls.html");
+    exit();
+}
+
+// Get search and category filter values
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$category = isset($_GET['category']) ? trim($_GET['category']) : '';
+
+// Create a base query to fetch available pets, excluding pets that are approved
+$query = "SELECT * FROM pets WHERE status = 'available' AND pet_id NOT IN 
+          (SELECT pet_id FROM requests WHERE status = 'approved')";
+
+// Prepare the SQL statement
+$stmt = $conn->prepare($query);
+
+// Add search condition if search keyword is provided
+if (!empty($search)) {
+    $searchTerm = "%$search%";
+    $query .= " AND (name LIKE ? OR breed LIKE ? OR age LIKE ? OR special_instructions LIKE ?)";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ssss", $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+}
+
+// Add category condition if a category is selected
+if (!empty($category)) {
+    $query .= " AND category = ?";
+    $stmt = $conn->prepare($query);
+    if (!empty($search)) {
+        $stmt->bind_param("sssss", $searchTerm, $searchTerm, $searchTerm, $searchTerm, $category);
+    } else {
+        $stmt->bind_param("s", $category);
+    }
+}
+
+// Execute the query
+$stmt->execute();
+$pets_result = $stmt->get_result();
+?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adopt - PAW FINDS</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="adopt-styles.css">
-    <link rel="icon" type="icon/x-icon" href="resources/PawFinds-4.png">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        *::selection {
-            background-color: #3d3d3d;
-            color: whitesmoke;
-        }
-    </style>
+    <title>Available Pets for Adoption</title>
+    <link rel="stylesheet" href="assets/css/adoptstyle.css"> <!-- Link to your CSS file -->
 </head>
 <body>
-    <main style="background-color: rgb(251, 245, 235);">
-        <section class="adopt-section">
-            <h1>Adopt a Pet</h1>
-            <p>Give a loving home to a furry companion and change a life forever.</p>
- 
-            <div class="adopt-steps">
-                <div class="step">
-                    <img src="resources/browse.png" alt="Browse Icon">
-                    <h3>Browse Pets</h3>
-                    <p>Search for your perfect match by browsing our available pets.</p>
-                    <a href="browse-pets.php" class="btn">Browse Pets</a>
-                </div>
-                <div class="step">
-                    <img src="resources/apply.png" alt="Apply Icon">
-                    <h3>Apply to Adopt</h3>
-                    <p>Complete our online application form to begin the adoption process.</p>
-                    <a href="#adoption-form" class="btn">Apply Now</a>
-                </div>
-                <div class="step">
-                    <h3>Meet and Greet</h3>
-                    <p>Schedule a meet-and-greet to ensure a perfect match with your new furry friend.</p>
-                    <a href="info/adoption-process.php" class="btn">Learn More</a>
-                </div>
+    <div class="container">
+        <h1 class="page-title">Available Pets for Adoption</h1>
+
+        <!-- Pet Category Filter and Search Bar -->
+        <form method="GET" action="adopt.php" class="filter-form">
+            <div class="form-group">
+                <label for="category">Filter by Category:</label>
+                <select name="category" id="category">
+                    <option value="">All Categories</option>
+                    <option value="dog" <?php if (isset($_GET['category']) && $_GET['category'] == 'dog') echo 'selected'; ?>>Dog</option>
+                    <option value="cat" <?php if (isset($_GET['category']) && $_GET['category'] == 'cat') echo 'selected'; ?>>Cat</option>
+                    <option value="bird" <?php if (isset($_GET['category']) && $_GET['category'] == 'bird') echo 'selected'; ?>>Bird</option>
+                    <option value="reptile" <?php if (isset($_GET['category']) && $_GET['category'] == 'reptile') echo 'selected'; ?>>Reptile</option>
+                    <option value="small_animal" <?php if (isset($_GET['category']) && $_GET['category'] == 'small_animal') echo 'selected'; ?>>Small Animal</option>
+                    <option value="other" <?php if (isset($_GET['category']) && $_GET['category'] == 'other') echo 'selected'; ?>>Other</option>
+                </select>
             </div>
- 
-            <div id="adoption-form">
-                <h2>Adoption Application</h2>
-                <form action="backend/process_adoption.php" method="post">
-                    <div class="form-group">
-                        <label for="name">Full Name</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" name="phone" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="address">Address</label>
-                        <textarea id="address" name="address" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="pet-type">Type of Pet</label>
-                        <select id="pet-type" name="pet-type" required>
-                            <option value="">Select a pet type</option>
-                            <option value="dog">Dog</option>
-                            <option value="cat">Cat</option>
-                            <option value="bird">Bird</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="reason">Reason for Adoption</label>
-                        <textarea id="reason" name="reason" required></textarea>
-                    </div>
-                    <button type="submit" class="btn">Submit Application</button>
-                </form>
+            <div class="form-group">
+                <label for="search">Search:</label>
+                <input type="text" id="search" name="search" value="<?php if (isset($_GET['search'])) echo htmlspecialchars($_GET['search']); ?>" placeholder="Search by name, breed, age...">
             </div>
-        </section>
-    </main>
- 
-    <script src="main.js"></script>
+            <button type="submit" class="btn-filter">Filter</button>
+        </form>
+
+        <!-- Display Available Pets -->
+        <div class="pet-list">
+            <?php if ($pets_result->num_rows > 0): ?>
+                <?php while ($pet = $pets_result->fetch_assoc()): ?>
+                    <div class="pet-card">
+                        <!-- Display the pet image with fallback -->
+                        <img src="<?php echo !empty($pet['image']) && file_exists($pet['image']) ? htmlspecialchars($pet['image']) : 'assets/images/default-pet.jpg'; ?>" alt="Pet Image" class="pet-image">
+                        <div class="pet-details">
+                            <h3><?php echo htmlspecialchars($pet['name']); ?></h3>
+                            <p><strong>Breed:</strong> <?php echo htmlspecialchars($pet['breed']); ?></p>
+                            <p><strong>Age:</strong> <?php echo htmlspecialchars($pet['age']); ?> years</p>
+                            <p><strong>Category:</strong> <?php echo ucfirst(htmlspecialchars($pet['category'])); ?></p>
+                            <p><strong>Special Instructions:</strong> <?php echo htmlspecialchars($pet['special_instructions']); ?></p>
+                            <!-- "Adopt Me" Button to Go to the Adoption Request Page -->
+                            <a href="adopt_request.php?pet_id=<?php echo $pet['pet_id']; ?>" class="btn-adopt">Adopt Me</a>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <p class="no-pets">No pets available for adoption at the moment.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php include('includes/footer.php'); ?>
 </body>
 </html>
-
-<?php include('footer.php'); ?>
